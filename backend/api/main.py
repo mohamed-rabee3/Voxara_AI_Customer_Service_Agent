@@ -78,8 +78,9 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",           # Local Next.js dev
         "http://127.0.0.1:3000",           # Alternative localhost
-        "https://*.vercel.app",            # Vercel deployments
+        "https://voxara-ai-customer-service-agent.vercel.app",  # Production Vercel
     ],
+    allow_origin_regex=r"https://.*\.vercel\.app",  # All Vercel preview deployments
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
