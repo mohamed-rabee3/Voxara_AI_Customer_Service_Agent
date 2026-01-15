@@ -1,0 +1,38 @@
+[tool.poetry]
+name = "voara-voice-agent"
+version = "0.1.0"
+description = "LiveKit Voice Agent with Gemini Live API and RAG"
+authors = ["Voara AI Team"]
+readme = "README.md"
+packages = [{include = "api"}, {include = "agent"}, {include = "rag"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.115.0"
+uvicorn = {extras = ["standard"], version = "^0.34.0"}
+livekit-agents = "^1.0.0"
+livekit-plugins-google = "^1.0.0"
+livekit-api = "^1.0.2"
+qdrant-client = "^1.16.2"
+google-generativeai = "^0.8.0"
+python-dotenv = "^1.0.0"
+pydantic = "^2.10.0"
+pydantic-settings = "^2.7.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-asyncio = "^0.24.0"
+httpx = "^0.28.0"
+
+[tool.poetry.scripts]
+start-api = "api.main:start"
+start-agent = "agent.main:main"
+ingest = "scripts.ingest_knowledge:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
