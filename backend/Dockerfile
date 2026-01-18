@@ -30,13 +30,14 @@ WORKDIR /app
 # Copy dependency files
 COPY pyproject.toml poetry.lock ./
 
-# CRITICAL: Install NumPy 1.24.4 FIRST - this is the last version with SSE2 baseline
-# NumPy 1.25+ requires SSE4.1/SSE4.2 which Core2Duo doesn't have
-RUN pip install "numpy==1.24.4"
-
 # Install dependencies (no dev dependencies for production)
-# Poetry will see numpy is already installed and use it
 RUN poetry install --only main --no-root
+
+# CRITICAL: AFTER poetry install, force downgrade NumPy to 1.24.4
+# NumPy 1.24.4 is the last version with SSE2 baseline (Core2Duo compatible)
+# NumPy 1.25+ requires SSE4.1/SSE4.2 which Core2Duo doesn't have
+# Poetry installs a newer numpy, so we must replace it
+RUN pip uninstall -y numpy && pip install --no-cache-dir "numpy==1.24.4"
 
 # Verify NumPy works (will fail fast if CPU incompatible)
 RUN python -c "import numpy; print(f'NumPy {numpy.__version__} loaded successfully')"
@@ -46,6 +47,12 @@ COPY . .
 
 # Install the project itself
 RUN poetry install --only main
+
+# Re-pin numpy after final poetry install (in case it got overwritten)
+RUN pip install --no-cache-dir "numpy==1.24.4" --force-reinstall
+
+# Final verification
+RUN python -c "import numpy; print(f'Final NumPy {numpy.__version__}')"
 
 # Expose port
 EXPOSE 8000
