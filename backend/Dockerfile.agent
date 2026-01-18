@@ -12,22 +12,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     POETRY_VIRTUALENVS_CREATE=false \
     POETRY_NO_INTERACTION=1
 
-# CRITICAL: Force NumPy to build for old CPUs (SSE2 only, no SSE4/AVX)
-# Core2Duo E8400 only supports SSE2/SSE3/SSSE3
-ENV NPY_DISABLE_CPU_FEATURES="AVX AVX2 AVX512F AVX512CD AVX512_SKX AVX512_CLX AVX512_CNL AVX512_ICL SSE41 SSE42 POPCNT"
-ENV CFLAGS="-march=core2 -mno-sse4.1 -mno-sse4.2 -mno-avx -mno-avx2"
-
 # Add poetry to PATH
 ENV PATH="$POETRY_HOME/bin:$PATH"
 
-# Install system dependencies including OpenBLAS for NumPy
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
     build-essential \
-    gfortran \
-    libopenblas-dev \
-    liblapack-dev \
-    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
@@ -39,13 +30,13 @@ WORKDIR /app
 # Copy dependency files
 COPY pyproject.toml poetry.lock ./
 
-# Install dependencies (no dev dependencies for production)
-RUN poetry install --only main --no-root
+# CRITICAL: Install NumPy 1.24.4 FIRST - this is the last version with SSE2 baseline
+# NumPy 1.25+ requires SSE4.1/SSE4.2 which Core2Duo doesn't have
+RUN pip install "numpy==1.24.4"
 
-# CRITICAL: AFTER poetry install, force reinstall NumPy from source
-# This ensures NumPy is built for Core2Duo without SSE4/AVX
-RUN pip uninstall -y numpy && \
-    pip install --no-cache-dir --no-binary :all: "numpy<2.0" --force-reinstall
+# Install dependencies (no dev dependencies for production)
+# Poetry will see numpy is already installed and use it
+RUN poetry install --only main --no-root
 
 # Verify NumPy works (will fail fast if CPU incompatible)
 RUN python -c "import numpy; print(f'NumPy {numpy.__version__} loaded successfully')"
