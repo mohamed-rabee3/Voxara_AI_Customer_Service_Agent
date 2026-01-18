@@ -1,0 +1,82 @@
+version: '3.8'
+
+# ============================================
+# Voxara Voice Agent - Production Docker Compose
+# Optimized for Core2Duo E8400 (no AVX support)
+# ============================================
+
+services:
+  # --------- Backend API (FastAPI) ---------
+  backend-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: voxara-backend-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - LIVEKIT_URL=${LIVEKIT_URL}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - QDRANT_URL=${QDRANT_URL}
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 768M
+        reservations:
+          cpus: '0.3'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - voxara-network
+
+  # --------- Voice Agent (LiveKit) ---------
+  voice-agent:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.agent
+    container_name: voxara-voice-agent
+    restart: unless-stopped
+    environment:
+      - LIVEKIT_URL=${LIVEKIT_URL}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - QDRANT_URL=${QDRANT_URL}
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 768M
+        reservations:
+          cpus: '0.3'
+          memory: 256M
+    depends_on:
+      backend-api:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - voxara-network
+
+networks:
+  voxara-network:
+    driver: bridge
