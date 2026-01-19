@@ -251,11 +251,18 @@ class QdrantService:
         
         try:
             info = await client.get_collection(self.collection_name)
+            # Handle API differences between qdrant-client versions
+            # Newer versions use points_count, older used vectors_count
+            vectors_count = getattr(info, 'vectors_count', None)
+            if vectors_count is None:
+                # Try to get from points_count as fallback
+                vectors_count = getattr(info, 'points_count', 0)
+            
             return {
                 'name': self.collection_name,
-                'vectors_count': info.vectors_count,
-                'points_count': info.points_count,
-                'status': info.status
+                'vectors_count': vectors_count,
+                'points_count': getattr(info, 'points_count', 0),
+                'status': str(info.status) if hasattr(info, 'status') else 'unknown'
             }
         except Exception as e:
             logger.error(f"Error getting collection info: {e}")
